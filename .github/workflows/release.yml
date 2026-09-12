@@ -1,0 +1,32 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install platformio
+      - run: pio run -e cardputer
+      - run: |
+          cp .pio/build/cardputer/firmware.factory.bin ESP1312.bin
+          cp .pio/build/cardputer/firmware.bin ESP1312-app.bin
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ESP1312.bin
+            ESP1312-app.bin
+          body: |
+            Copy one of these to the SD card's `/downloads` folder and flash it from Launcher:
+            - `ESP1312-app.bin` keeps Launcher on the device. Try this one first.
+            - `ESP1312.bin` is the full image (bootloader, partitions, app). It wipes the whole flash, Launcher included, so it always boots. It also works with esptool at offset 0.
+
+            See the README's Build and flash section.

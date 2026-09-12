@@ -1,0 +1,8 @@
+.pio/
+.vscode/
+.idea/
+a.out
+logs/
+dist/
+scripts/.pii-local
+security-scan/
