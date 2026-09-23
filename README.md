@@ -62,7 +62,7 @@ pio device monitor -e cardputer     # 115200: [SD] / [HIT] lines
 
 Which file to copy:
 
-- `ESP1312-app.bin` keeps Launcher on the device. Try this one first.
+- `ESP1312-app.bin` keeps Launcher on the device. Tested with Launcher 2.9.1 on the Cardputer ADV, so start here.
 - `ESP1312.bin` wipes the whole flash, Launcher included, so it always boots, but you'll need to reflash Launcher to get it back.
 
 A local build produces the same two files as `.pio/build/cardputer/firmware.factory.bin` and `firmware.bin`.
