@@ -134,9 +134,13 @@ static const Sig SIGS[] = {
 };
 
 // Make a radio-supplied string safe as one CSV cell of size n. Field separators become spaces,
-// and a leading = + - @ gets a quote in front so spreadsheets read the cell as text, not a formula.
+// anything outside printable ASCII becomes '?' so a dumped log can't drive the terminal that
+// shows it, and a leading = + - @ gets a quote in front so spreadsheets read the cell as text.
 static void csvSafe(char* s, size_t n) {
-  for (char* c = s; *c; c++) if (*c == ',' || *c == '"' || *c == '\n' || *c == '\r') *c = ' ';
+  for (char* c = s; *c; c++) {
+    if (*c == ',' || *c == '"') *c = ' ';
+    else if ((unsigned char)*c < 32 || (unsigned char)*c > 126) *c = '?';
+  }
   if (*s && strchr("=+-@", *s)) { memmove(s + 1, s, n - 2); s[n - 1] = 0; *s = '\''; }
 }
 

@@ -25,7 +25,9 @@ int main() {
 
   char b[24];
   strcpy(b, "=cmd|' /c calc'!A0");      csvSafe(b, sizeof b); assert(!strcmp(b, "'=cmd|' /c calc'!A0"));
-  strcpy(b, "@SUM(1,\"2\")\r\n");      csvSafe(b, sizeof b); assert(!strcmp(b, "'@SUM(1  2 )  "));
+  strcpy(b, "@SUM(1,\"2\")\r\n");      csvSafe(b, sizeof b); assert(!strcmp(b, "'@SUM(1  2 )??"));
+  strcpy(b, "\x1b]0;x\x07" "AP\x7f");     csvSafe(b, sizeof b); assert(!strcmp(b, "?]0;x?AP?"));   // terminal escapes
+  strcpy(b, "caf\xc3\xa9");              csvSafe(b, sizeof b); assert(!strcmp(b, "caf??"));        // non-ASCII, incl. UTF-8 C1 controls
   strcpy(b, "-Guest");                 csvSafe(b, sizeof b); assert(!strcmp(b, "'-Guest"));
   strcpy(b, "+1234567890123456789012"); csvSafe(b, sizeof b); assert(!strcmp(b, "'+123456789012345678901"));   // full buffer: last char drops
   strcpy(b, "Flock-2f3a");             csvSafe(b, sizeof b); assert(!strcmp(b, "Flock-2f3a"));
