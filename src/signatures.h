@@ -37,8 +37,8 @@ static const Sig SIGS[] = {
   // GENETEC: AutoVu SharpV/SharpZ ALPR cameras (fixed and vehicle mounted)
   { SIG_OUI,     "00:bf:15",    "GENETEC", "wifi_oui"        },
   { SIG_OUI,     "0c:bf:15",    "GENETEC", "wifi_oui"        },
-  // CRADLEPOINT: in-vehicle LTE routers, the WiFi AP inside most cruisers. Weak on its
-  // own, buses, ambulances and retail use them too, but moving with you it's a good tell.
+  // CRADLEPOINT: in-vehicle LTE routers, the WiFi AP inside most cruisers. Weak on its own,
+  // since buses, ambulances, retail and fixed sites use them too. One moving with you is the tell.
   { SIG_OUI,     "00:30:44",    "CRADLEPOINT", "wifi_oui"    },
   { SIG_OUI,     "00:e0:1c",    "CRADLEPOINT", "wifi_oui"    },
   // ---- deployed surveillance ----

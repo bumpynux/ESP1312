@@ -144,7 +144,7 @@ static void startBle() {
   s->setScanCallbacks(&scanCB);
   s->setActiveScan(active);
   s->setInterval(80);
-  s->setWindow(80);      // full duty; a reduced-duty guard against a suspected battery brownout was tested on battery and wasn't needed
+  s->setWindow(80);      // full duty
   s->setDuplicateFilter(false);
   s->setMaxResults(0);
   s->start(0, false, false);   // forever
@@ -160,8 +160,7 @@ static int baudIdx = 0;
 // output turned off (a prior firmware like Meshtastic sends "$PCAS03,0..." and the
 // module keeps it), which leaves a passive reader seeing nothing. So on every baud
 // we open, we re-send "$PCAS03,1..." to turn GGA+RMC back on. This is non-destructive
-// (no reset, no cold start, the fix and almanac survive) and harmless if already on;
-// verified on-device to un-mute a silenced module while keeping a live fix.
+// (no reset, no cold start, the fix and almanac survive) and harmless if already on.
 static void gpsEnable() { gpsSerial.print("$PCAS03,1,0,0,0,1,0,0,0,0,0,,,0,0*02\r\n"); }
 
 static void gpsBegin() {
@@ -282,7 +281,7 @@ static void logRec(const Rec& e) {
     for (; h < hitsN; h++) if (hits[h].kind == e.kind && strcmp(hits[h].mac, e.mac) == 0) break;
     if (h == hitsN) {
       if (hitsN < HITS_MAX) hitsN++;
-      else { h = 0; for (int k = 1; k < HITS_MAX; k++) if (hits[k].last < hits[h].last) h = k; }   // evict the oldest
+      else { h = 0; for (int k = 1; k < HITS_MAX; k++) if (now - hits[k].last > now - hits[h].last) h = k; }   // evict the oldest, wrap-safe
       strlcpy(hits[h].mac, e.mac, sizeof hits[h].mac);
       strlcpy(hits[h].vendor, sig->vendor, sizeof hits[h].vendor);
       strlcpy(hits[h].method, sig->method, sizeof hits[h].method);
@@ -405,7 +404,7 @@ static void logo(int x, int y, uint16_t c) {
   canvas.drawFastHLine(x, cy, 3, c); canvas.drawFastHLine(x + 10, cy, 3, c);
 }
 
-// Bigger crosshair, ~24 px, for the splash. The double ring reads bolder at this size.
+// Bigger crosshair, ~30 px, for the splash. The double ring reads bolder at this size.
 static void bigLogo(int cx, int cy, uint16_t c) {
   canvas.drawCircle(cx, cy, 9, c);
   canvas.drawCircle(cx, cy, 10, c);
@@ -510,7 +509,7 @@ static void header() {
   canvas.setTextColor(bc, BAR_BG); canvas.drawString(v, 204, 3);
   // version, dim, tucked right after the title so it reads as part of the wordmark
   canvas.setFont(&fonts::Font0); canvas.setTextSize(1);
-  canvas.setTextColor(TFT_DARKGREY, BAR_BG); canvas.drawString("v" FW_VERSION, 99, 10);   // bottom-aligned with the title, tucked in close
+  canvas.setTextColor(TFT_DARKGREY, BAR_BG); canvas.drawString("v" FW_VERSION, 99, 10);
   big(false);   // restore Font2 for the body rows the screens draw next
 }
 
@@ -691,8 +690,8 @@ static void serialKeys() {
 }
 
 // ---- boot hero --------------------------------------------------------------
-// The whole splash in one frame so the early boot frame and the dwell share it.
-// tick advances the trailing dots; draws to the canvas, caller pushes.
+// Draws the splash to the canvas; the caller pushes it. The early boot frame and the
+// ready gate share it.
 static void drawSplash() {
   canvas.fillSprite(TFT_BLACK);
   bigLogo(120, 22, AMBER);   // raised, clear of the wordmark below
@@ -700,7 +699,7 @@ static void drawSplash() {
   canvas.setTextColor(AMBER, TFT_BLACK);
   canvas.setFont(&fonts::Font0); canvas.setTextSize(3);
   canvas.drawString("ESP1312", 120, 44);                 // ~126 px wide, centered
-  // tagline on its own solid band so it reads as a distinct element, not stacked text
+  // tagline on its own band
   canvas.fillRect(0, 74, 240, 20, BAR_BG);
   canvas.setFont(&fonts::Font2); canvas.setTextSize(1); canvas.setTextDatum(top_left);
   int wa = canvas.textWidth("counter "), wb = canvas.textWidth("ESP");
@@ -710,7 +709,7 @@ static void drawSplash() {
   canvas.setTextColor(TFT_LIGHTGREY, BAR_BG); canvas.drawString("ionage", sx + wa + wb, 77);
   // start prompt: driving waits for a keypress
   canvas.setTextDatum(top_center); canvas.setTextColor(canvas.color565(120, 200, 255), TFT_BLACK);
-  canvas.drawString("press any key to start", 120, 101);   // centered in the gap between the band and the version
+  canvas.drawString("press any key to start", 120, 101);
   // version, dim, at the bottom
   canvas.setFont(&fonts::Font0); canvas.setTextSize(1);
   canvas.setTextColor(TFT_DARKGREY, TFT_BLACK); canvas.drawString("v" FW_VERSION, 120, 124);
