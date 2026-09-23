@@ -21,6 +21,7 @@ jobs:
           cp .pio/build/cardputer/firmware.bin ESP1312-app.bin
       - uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           files: |
             ESP1312.bin
             ESP1312-app.bin
