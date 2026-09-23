@@ -122,7 +122,7 @@ Everything lands in `/ESP1312/` on the card as `.csv`, in a per-day subfolder. A
 
 `enc` is WPA2/OPEN/... for WiFi, `probe` or `rid` for sniffed frames, and the address type for BLE: `pub`, `rnd` (static random), `rpa` (rotates), `nrpa` (rotates). A rotating `rpa` with a fixed company ID is the classic "hiding but identifiable" signature. `mfg_data` is the first four bytes after the company ID, which is where Apple's Find My type byte lives.
 
-Names and UUID lists are made CSV-safe before they're written. Commas, quotes, and line breaks become spaces, and a name that starts with `=`, `+`, `-` or `@` gets a leading `'` so a spreadsheet shows it as text instead of running it as a formula.
+Names and UUID lists are made CSV-safe before they're written. Commas and quotes become spaces, anything outside printable ASCII becomes `?`, and a name that starts with `=`, `+`, `-` or `@` gets a leading `'` so a spreadsheet shows it as text instead of running it as a formula.
 
 A MAC is re-logged after it moves more than 25 m or 20 s pass. Every signature hit chirps, in any mode, except trackers (AirTag, Tile, SmartTag). Those get the vendor column filled in but stay out of the chirp and the threat count, since they're usually not a real threat.
 
