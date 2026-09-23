@@ -97,7 +97,18 @@ You can press `S` to switch scan modes. Passive listens only and probe actively 
 
 ## Serial
 
-The same keys work over USB serial at 115200 (`pio device monitor`, `screen`, anything). `d` streams the current log file back between `[DUMP]` and `[END]` lines, so you can check a recording without pulling the card, and `f<name>` (a path under `/ESP1312/`, say `fYYYY-MM-DD/log_4.csv`) does the same for an older one. `h` prints the threats table, `l` lists the log folder, and `x` deletes every log except the one currently open. `g` sends the screen as raw pixels (240x135, one RGB332 byte each) for screenshots, including the splash, and `v` moves to the next screen. `G` prints one line of GPS state (baud, NMEA and checksum counts, sats, fix). A `[mem]` line every 30 s shows free heap and counts.
+While building this I spent a lot of time debugging over USB serial, so I added a few commands to make that easier. Connect at 115200 with `pio device monitor`, `screen`, or anything else. The keyboard keys work here too, and the firmware prints `[SD]` and `[HIT]` lines as things happen plus a `[mem]` line every 30 s with free heap and counts.
+
+| Command   | What it does                                                                                                     |
+|-----------|------------------------------------------------------------------------------------------------------------------|
+| `d`       | Streams the current log file between `[DUMP]` and `[END]`, so you can check a recording without pulling the card |
+| `f<name>` | Same for an older file, by path under `/ESP1312/` (say `fYYYY-MM-DD/log_4.csv`)                                  |
+| `h`       | Prints the threats table                                                                                         |
+| `l`       | Lists the log folder                                                                                             |
+| `x`       | Deletes every log except the one currently open                                                                  |
+| `g`       | Sends the screen as raw pixels (240x135, one RGB332 byte each) for screenshots, including the splash             |
+| `v`       | Moves to the next screen                                                                                         |
+| `G`       | Prints one line of GPS state (baud, NMEA and checksum counts, sats, fix)                                         |
 
 ## Files
 
