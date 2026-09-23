@@ -15,7 +15,12 @@ A device shows up over the air in four ways. ESP1312 sees all four, with the lim
 
 Some things never show up here, like Bluetooth Classic (radios, speaker mics, most printers), cellular (cell-site simulators, LTE uplinks), and wired cameras.
 
-Status key: **IN** already in `signatures.h`. **ADD** verified identifier, not added yet. **CAPTURE** exists, but the identifier has to come from a real recording near the hardware. **GAP** identifiable but needs a capability the logger doesn't have. **NO** not visible over WiFi or BLE.
+Status key:
+
+- **IN** is already in `signatures.h`.
+- **CAPTURE** means the gear exists, but its identifier has to come from a real recording near the hardware.
+- **GAP** means it's identifiable, but only with a capability the logger doesn't have.
+- **NO** means it isn't visible over WiFi or BLE at all.
 
 ## Officer-worn
 

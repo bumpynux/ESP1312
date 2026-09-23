@@ -1,5 +1,7 @@
 # ESP1312
 
+**Counter ESPionage for the Cardputer ADV**
+
 ![ESP1312 running on a Cardputer ADV](docs/device.jpg)
 
 ESP1312 is a geotagged WiFi + BLE surveillance-device logger for the **[M5Stack Cardputer ADV](https://docs.m5stack.com/en/core/Cardputer-Adv)** with the [M5 LoRa-1262 Cap](https://docs.m5stack.com/en/cap/Cap_LoRa-1262), whose GPS does the geotagging. It logs fields that most wardriving firmwares drop (BLE company ID, manufacturer data, service UUIDs, address type, WiFi probe requests), so gear that rotates its MAC or never beacons (Axon, Meta, Flock, though Flock is getting harder to detect as newer units advertise less) still gets caught.
