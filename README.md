@@ -108,7 +108,7 @@ While building this I spent a lot of time debugging over USB serial, so I added 
 | `x`       | Deletes every log except the one currently open                                                                  |
 | `g`       | Sends the screen as raw pixels (240x135, one RGB332 byte each) for screenshots, including the splash             |
 | `v`       | Moves to the next screen                                                                                         |
-| `G`       | Prints one line of GPS state (baud, NMEA and checksum counts, sats, fix)                                         |
+| `G`       | Prints one line of GPS state (RX pin, baud, NMEA and checksum counts, sats, fix)                                 |
 
 ## Files
 
@@ -130,7 +130,9 @@ The signature table is in `src/signatures.h`, and where each row came from and h
 
 ## Wiring and knobs
 
-The pin defaults live in `src/main.cpp`. SD is on SCK 40 / MISO 39 / MOSI 14 / CS 12 and GPS on RX 15 / TX 13. Override any of them, or `GPS_BAUD`, with a `-D` build flag in `platformio.ini`. `TZ_HOURS` is the one already set there. GPS starts at `GPS_BAUD` (115200), re-sends the NMEA-enable command every 5 s, and swaps to 9600 after two silent tries, until checksums pass. The details view shows the current baud and the passed-checksum count, so a wrong pin shows up as `ok 0` forever.
+The pin defaults live in `src/main.cpp`. SD is on SCK 40 / MISO 39 / MOSI 14 / CS 12. `TZ_HOURS` is the one flag already set in `platformio.ini`.
+
+GPS is found by probing, so any NMEA module on the LoRa cap (RX 15 / TX 13) or on the Grove port (pins 1 and 2, either way round) should work with the same build. The cap is tested; the Grove path is not yet, so reports either way are welcome. Every 5 s without a valid sentence the firmware moves on: silence means the wrong pins, garbage means the wrong baud. It tries 115200, 9600, 38400, 4800 and 57600, and a module on the cap typically locks within 5 s, one on the Grove port within 20 s. The Grove pins are listened to only, never driven, so a module there that needs a command before it will talk is not supported. `-D GPS_RX`, `GPS_TX` and `GPS_BAUD` build flags replace the first pair and baud tried, for wiring the probe does not cover. The details view shows the RX pin and baud being tried plus the passed-checksum count, so a module the probe never finds shows up as `ok 0` while the pin and baud keep changing.
 
 The ADV needs GPIO5 high before the SD card will answer. The firmware does that, then mounts at 4 MHz on HSPI.
 

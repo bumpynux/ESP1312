@@ -39,7 +39,7 @@
 
 // Semantic version, MAJOR.MINOR.PATCH. 0.x means pre-release, not yet a firmware
 // a stranger could flash fresh and drive with. Bumped by hand, never automatically.
-#define FW_VERSION "0.1.5"
+#define FW_VERSION "0.2.0"
 
 static const char*    LOG_DIR    = "/ESP1312";
 static const double   RELOG_M    = 25.0;           // re-log a known MAC after it moves this far...
@@ -151,10 +151,15 @@ static void startBle() {
 }
 
 // ---- GPS --------------------------------------------------------------------
-// Start at GPS_BAUD and rotate every 5 s until NMEA checksums pass. This cap runs at
-// 115200; 9600 is the ATGM336H default, in case a fresh or reset module comes up there.
-static const int BAUDS[] = { GPS_BAUD, 9600 };
-static int baudIdx = 0;
+// Probe pin pairs and bauds every 5 s until NMEA checksums pass. Pairs: the LoRa cap (or
+// the -D override), then the Grove port either way round. Grove pairs are receive-only
+// (TX -1), so probing never drives a pin on the port, whatever else is plugged in.
+// Bauds: the cap's 115200, the ATGM336H default, then the common Grove-module rates.
+static const int8_t PINS[][2] = { { GPS_RX, GPS_TX }, { 1, -1 }, { 2, -1 } };
+static const int    BAUDS[]   = { GPS_BAUD, 9600, 38400, 4800, 57600 };
+#define N_PINS  (int)(sizeof PINS  / sizeof PINS[0])
+#define N_BAUDS (int)(sizeof BAUDS / sizeof BAUDS[0])
+static int pinIdx = 0, baudIdx = 0;
 
 // The Cap LoRa-1262 GPS is a CASIC AT6558/ATGM336H. It can boot with its NMEA
 // output turned off (a prior firmware like Meshtastic sends "$PCAS03,0..." and the
@@ -163,22 +168,35 @@ static int baudIdx = 0;
 // (no reset, no cold start, the fix and almanac survive) and harmless if already on.
 static void gpsEnable() { gpsSerial.print("$PCAS03,1,0,0,0,1,0,0,0,0,0,,,0,0*02\r\n"); }
 
-static void gpsBegin() {
-  gpsSerial.begin(BAUDS[baudIdx], SERIAL_8N1, GPS_RX, GPS_TX);
-  delay(30);        // let the UART settle before the module has to receive the command
-  gpsEnable();
+// Plain GPIO before attaching (a software reset, how bmorcelli's Launcher boots the app,
+// leaves pins in a state begin() doesn't clear) and after detaching (TX stays driven low).
+static void gpsPinsReset() {
+  for (int i = 0; i < 2; i++) if (PINS[pinIdx][i] >= 0) gpio_reset_pin((gpio_num_t)PINS[pinIdx][i]);
 }
 
+static void gpsBegin() {
+  gpsPinsReset();
+  gpsSerial.begin(BAUDS[baudIdx], SERIAL_8N1, PINS[pinIdx][0], PINS[pinIdx][1]);
+  delay(30);        // let the UART settle before the module has to receive the command
+  if (PINS[pinIdx][1] >= 0) gpsEnable();
+}
+
+// A wrong baud still delivers garbage bytes; a wrong pin pair delivers none. So silence
+// moves to the next pair at the same baud and garbage moves to the next baud on the same
+// pair. Once every pair has been silent at one baud, the baud advances, which is how a
+// CASIC module muted at a non-first baud still gets its enable: one lap later, not never.
 static void gpsAutoBaud() {
-  static uint32_t t = 0, good = 0;
-  static int miss = 0;
+  static uint32_t t = 0, good = 0, heard = 0;
   if (millis() - t < 5000) return;
   t = millis();
-  if (gps.passedChecksum() > good) { good = gps.passedChecksum(); miss = 0; return; }
-  // No valid NMEA. First re-send the enable at the CURRENT baud, since a module muted at the
-  // right rate un-mutes without us leaving it. Only rotate if re-enabling keeps failing.
-  gpsEnable();
-  if (++miss >= 2) { miss = 0; baudIdx = (baudIdx + 1) % 2; gpsSerial.end(); gpsBegin(); }
+  if (gps.passedChecksum() > good) { good = gps.passedChecksum(); heard = gps.charsProcessed(); return; }
+  bool silent = gps.charsProcessed() == heard;
+  heard = gps.charsProcessed();
+  gpsSerial.end();
+  gpsPinsReset();
+  if (!silent)                    baudIdx = (baudIdx + 1) % N_BAUDS;
+  else if (++pinIdx == N_PINS)  { pinIdx = 0; baudIdx = (baudIdx + 1) % N_BAUDS; }
+  gpsBegin();
 }
 
 static void gpsTime(char* b, size_t n) {
@@ -565,7 +583,7 @@ static void drawDetails() {
   row(45, "scan", active ? TFT_ORANGE : TFT_CYAN, active ? "active (probe)" : "passive (listen)");
   bool fix = gps.location.isValid();
   if (fix) snprintf(v, sizeof v, "%.5f, %.5f", gps.location.lat(), gps.location.lng());
-  else     snprintf(v, sizeof v, "no fix  baud %d  ok %lu", BAUDS[baudIdx], (unsigned long)gps.passedChecksum());
+  else     snprintf(v, sizeof v, "no fix  rx%d %d  ok %lu", PINS[pinIdx][0], BAUDS[baudIdx], (unsigned long)gps.passedChecksum());
   row(61, "gps", fix ? TFT_GREEN : TFT_ORANGE, v);
   snprintf(v, sizeof v, "%d sat  hdop %.1f", gps.satellites.isValid() ? (int)gps.satellites.value() : 0,
            gps.hdop.isValid() ? gps.hdop.value() / 100.0 : 0.0);
@@ -682,7 +700,7 @@ static void serialKeys() {
     }
     else if (c == 'l') { walkDir(LOG_DIR, false); Serial.println("[END]"); }
     else if (c == 'x') { walkDir(LOG_DIR, true);  Serial.println("[WIPED]"); }
-    else if (c == 'G') Serial.printf("[gps] baud=%d nmea=%lu ok=%lu sats=%d fix=%d\n", BAUDS[baudIdx],
+    else if (c == 'G') Serial.printf("[gps] rx=%d baud=%d nmea=%lu ok=%lu sats=%d fix=%d\n", PINS[pinIdx][0], BAUDS[baudIdx],
       (unsigned long)gps.charsProcessed(), (unsigned long)gps.passedChecksum(),
       gps.satellites.isValid() ? (int)gps.satellites.value() : -1, gps.location.isValid());
     else handleKey(c);
@@ -761,12 +779,10 @@ void setup() {
   }
   Serial.printf("[SD] %s type=%d\n", sdOk ? "mounted" : "FAILED", (int)SD.cardType());
 
-  // A software reset (how bmorcelli's Launcher boots the app) leaves UART1 and the GPS
-  // pins in a state HardwareSerial.begin() doesn't fully clear, so RX reads nothing. A
-  // hardware reset doesn't. Reset the peripheral and pins to default first, once.
+  // A software reset (how bmorcelli's Launcher boots the app) leaves UART1 in a state
+  // HardwareSerial.begin() doesn't fully clear. A hardware reset doesn't. Reset it once;
+  // gpsBegin() does the same for the pins.
   periph_module_reset(PERIPH_UART1_MODULE);
-  gpio_reset_pin((gpio_num_t)GPS_RX);
-  gpio_reset_pin((gpio_num_t)GPS_TX);
   gpsBegin();
   NimBLEDevice::init("");
   startBle();
